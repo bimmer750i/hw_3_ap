@@ -9,7 +9,7 @@ services:
     volumes:
       - .:/app
     environment:
-      - DATABASE_URL=sqlite:///./sql_app.db
+      - DATABASE_URL=postgresql://admin:adminpassword@db:5432/shortener_db
       - REDIS_URL=redis://redis:6379/0
       - SECRET_KEY=09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7
       - ALGORITHM=HS256
@@ -18,14 +18,20 @@ services:
       - ADMIN_PASSWORD=adminpassword
       - ADMIN_EMAIL=admin@example.com
     depends_on:
-      - redis
-      - db
+      redis:
+        condition: service_started
+      db:
+        condition: service_healthy
+    networks:
+      - app_network
 
   redis:
     image: redis:latest
     container_name: redis
     ports:
       - "6379:6379"
+    networks:
+      - app_network
 
   db:
     image: postgres:latest
@@ -37,7 +43,20 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
+    networks:
+      - app_network
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U admin -d shortener_db" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
 volumes:
   postgres_data:
+
+networks:
+  app_network:
+    driver: bridge
