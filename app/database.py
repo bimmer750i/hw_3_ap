@@ -1,28 +1,30 @@
-from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.ext.asyncio import async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession
 import os
 
-# Настройки базы данных
-SQLALCHEMY_DATABASE_URL = os.getenv(
+# Настройки базы данных - ИСПРАВЛЕНО: добавлено +asyncpg
+DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql://admin:adminpassword@db:5432/shortener_db"
+    "postgresql+asyncpg://admin:adminpassword@db:5432/shortener_db"  # Изменено здесь
 )
 
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL,
+engine = create_async_engine(
+    DATABASE_URL,
     pool_size=5,
     max_overflow=10,
     echo=True
 )
 
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+SessionLocal = async_sessionmaker(
+    engine,
+    class_=AsyncSession,
+    expire_on_commit=False
+)
 
 Base = declarative_base()
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+async def get_db():
+    async with SessionLocal() as session:
+        yield session

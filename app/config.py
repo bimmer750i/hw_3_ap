@@ -1,4 +1,4 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     # Настройки аутентификации
@@ -17,8 +17,11 @@ class Settings(BaseSettings):
     admin_password: str  
     admin_email: str 
 
-    class Config:
-        env_file = ".env"  # Указываем файл .env для загрузки переменных окружения
+    model_config = SettingsConfigDict(
+            env_file=".env",  # Указываем файл .env
+            env_file_encoding="utf-8",  # Явно указываем кодировку
+            extra="ignore"  # Игнорировать лишние поля
+        )
 
 # Создаем экземпляр настроек
 settings = Settings()
