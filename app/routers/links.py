@@ -1,12 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
-from datetime import datetime
+from datetime import datetime, timezone
 from dateutil import tz
+from typing import Optional
 from app.database import get_db
 from app import models, crud, cache, utils
 from app.models import schemas
-from app.auth import get_current_user, check_admin
+from app.auth import get_current_user, check_admin, get_current_user_optional
 from app.models.models import User
 from app.models.models import Link
 import urllib.parse
@@ -20,7 +21,7 @@ router = APIRouter()
 async def create_short_link(
         link: schemas.LinkCreate,
         db: AsyncSession = Depends(get_db),
-        current_user: User = Depends(get_current_user, use_cache=False)
+        current_user : Optional[User] = Depends(get_current_user_optional, use_cache=False)
 ):
     """
     Создает короткую ссылку. Доступно всем пользователям.
@@ -48,7 +49,7 @@ async def create_short_link(
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
     if db_link.expires_at:
-        ttl = (db_link.expires_at - datetime.utcnow()).total_seconds()
+        ttl = (db_link.expires_at - datetime.now(timezone.utc)).total_seconds()
         cache.cache_url(short_code, db_link.original_url, ttl=int(ttl))
     else:
         cache.cache_url(short_code, db_link.original_url)

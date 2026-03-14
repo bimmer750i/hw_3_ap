@@ -5,7 +5,6 @@ from datetime import timedelta
 from app.database import get_db
 from app import models, utils
 from app.models import schemas
-from app.auth import create_access_token
 from app.config import settings
 from app.models.models import User
 

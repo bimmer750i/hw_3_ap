@@ -1,40 +1,26 @@
-from datetime import datetime, timedelta
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from typing import Optional
+from fastapi import HTTPException, status, Depends
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.database import get_db
-from app.config import settings
 from app.models.models import User
+from app.config import settings
 
-security = HTTPBearer()
-
-
-def create_access_token(data: dict, expires_delta: timedelta = None) -> str:
-    to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(minutes=settings.access_token_expire_minutes)
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(
-        to_encode,
-        settings.secret_key,
-        algorithm=settings.algorithm
-    )
-    return encoded_jwt
+security = HTTPBearer(auto_error=False)  # Важно: auto_error=False
 
 
-async def get_current_user(
-        credentials: HTTPAuthorizationCredentials = Depends(security),
+async def get_current_user_optional(
+        credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
         db: AsyncSession = Depends(get_db)
-) -> User:
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+) -> Optional[User]:
+    """
+    Получает текущего пользователя из токена.
+    Если токен отсутствует или невалидный, возвращает None.
+    """
+    if not credentials:
+        return None
 
     try:
         token = credentials.credentials
@@ -45,17 +31,35 @@ async def get_current_user(
         )
         username: str = payload.get("sub")
         if username is None:
-            raise credentials_exception
-    except JWTError:
-        raise credentials_exception
+            return None
 
-    result = await db.execute(
-        select(User).where(User.username == username)
-    )
-    user = result.scalar_one_or_none()
+        result = await db.execute(
+            select(User).where(User.username == username)
+        )
+        user = result.scalar_one_or_none()
+
+        return user
+    except JWTError:
+        return None
+
+
+async def get_current_user(
+        credentials: HTTPAuthorizationCredentials = Depends(security),
+        db: AsyncSession = Depends(get_db)
+) -> User:
+    """
+    Получает текущего пользователя из токена.
+    Если токен отсутствует или невалидный, выбрасывает исключение.
+    """
+    user = await get_current_user_optional(credentials, db)
 
     if user is None:
-        raise credentials_exception
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     return user
 
 
@@ -65,3 +69,4 @@ def check_admin(user: User):
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Insufficient permissions"
         )
+    return user

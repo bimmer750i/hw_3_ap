@@ -33,7 +33,7 @@ Content-Type: application/json
   "short\_code": "example",
   "original\_url": "https://example.com",
   "expires\_at": "2026-03-31T23:59:59",
-  "created\_at": "2025-03-15T12:11:41",
+  "created\_at": "2026-03-15T12:11:41",
   "user\_id": 1
 }
 ```
@@ -63,8 +63,8 @@ GET /example/stats
 ``` json
 {
   "hits": 10,
-  "created\_at": "2025-03-15T12:00:00",
-  "last\_used": "2025-03-15T16:31:02"
+  "created\_at": "2026-03-15T12:00:00",
+  "last\_used": "2026-03-15T16:31:02"
 }
 ```
 

@@ -1,14 +1,15 @@
-from app.database import engine, Base, get_db, SessionLocal
-from contextlib import asynccontextmanager
-from fastapi import FastAPI
-from apscheduler.schedulers.background import BackgroundScheduler
-from app.routers import links, stats, auth_users
-from app.models.models import User
-from app.crud import delete_expired_links
-from app.utils import get_password_hash
-from app.config import settings
-from sqlalchemy.orm import sessionmaker
 import asyncio
+from contextlib import asynccontextmanager
+
+from apscheduler.schedulers.background import BackgroundScheduler
+from fastapi import FastAPI
+
+from app.config import settings
+from app.crud import delete_expired_links
+from app.database import engine, Base, SessionLocal
+from app.models.models import User
+from app.routers import links, stats, auth_users
+from app.utils import get_password_hash
 
 
 async def create_admin():
@@ -64,7 +65,7 @@ async def lifespan(app: FastAPI):
         await conn.run_sync(Base.metadata.create_all)
 
     # Создаем администратора (синхронно)
-    create_admin()
+    await create_admin()
 
     # Настраиваем планировщик
     scheduler = BackgroundScheduler()
